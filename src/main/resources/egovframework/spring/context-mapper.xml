@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd">
+
+    <!-- Mapper XML의 SQL을 같은 DataSource와 연결해 Service의 읽기 전용 트랜잭션에 참여시킵니다. -->
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource" />
+        <property name="mapperLocations" value="classpath:/egovframework/sqlmap/gis/mappers/*.xml" />
+    </bean>
+
+    <!-- repository 인터페이스를 MyBatis 프록시로 만들어 XML namespace와 메서드 id를 연결합니다. -->
+    <bean class="org.egovframe.rte.psl.dataaccess.mapper.MapperConfigurer">
+        <property name="basePackage" value="egovframework.example.gis.repository" />
+    </bean>
+
+</beans>

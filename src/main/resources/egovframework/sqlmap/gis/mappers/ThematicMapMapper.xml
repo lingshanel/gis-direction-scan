@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.example.gis.repository.ThematicMapMapper">
+
+    <!--
+        3D 배경에 필요한 토지피복·물·도로를 한 요청으로 묶어 반환합니다.
+        request_bounds를 한 번만 계산해 세 테이블이 같은 화면 범위를 사용하며, 먼저 공간 인덱스로
+        후보를 줄인 뒤 경계로 잘라냅니다. Service가 화면 반경에 맞춘 tolerance를 전달하므로
+        넓은 화면에서도 GeoJSON 크기를 제한하면서 면 도형의 위상은 보존할 수 있습니다.
+    -->
+    <select id="selectThematicMapGeoJson" resultType="string">
+        <![CDATA[
+        WITH request_bounds AS (
+            SELECT ST_Envelope(
+                ST_Buffer(
+                    ST_SetSRID(ST_MakePoint(#{longitude}, #{latitude}), 4326)::geography,
+                    #{radius}
+                )::geometry
+            ) AS geom
+        ),
+        landcover_geometries AS (
+            SELECT
+                l.osm_type,
+                l.osm_id,
+                l.landcover_type,
+                l.name,
+                ST_Multi(ST_CollectionExtract(
+                    ST_SimplifyPreserveTopology(
+                        ST_Intersection(l.geom, b.geom),
+                        #{tolerance}
+                    ),
+                    3
+                )) AS geom
+            FROM gis.landcover l
+            CROSS JOIN request_bounds b
+            WHERE l.geom && b.geom
+              AND ST_Intersects(l.geom, b.geom)
+        ),
+        landcover_features AS (
+            SELECT jsonb_build_object(
+                'type', 'Feature',
+                'id', 'landcover/' || osm_type || '/' || osm_id,
+                'properties', jsonb_strip_nulls(jsonb_build_object(
+                    'landcoverType', landcover_type,
+                    'name', NULLIF(name, '')
+                )),
+                'geometry', ST_AsGeoJSON(geom, 6)::jsonb
+            ) AS feature
+            FROM landcover_geometries
+            WHERE NOT ST_IsEmpty(geom)
+        ),
+        water_geometries AS (
+            SELECT
+                w.osm_type,
+                w.osm_id,
+                w.water_type,
+                w.name,
+                ST_Multi(ST_CollectionExtract(
+                    ST_SimplifyPreserveTopology(
+                        ST_Intersection(w.geom, b.geom),
+                        #{tolerance}
+                    ),
+                    3
+                )) AS geom
+            FROM gis.water w
+            CROSS JOIN request_bounds b
+            WHERE w.geom && b.geom
+              AND ST_Intersects(w.geom, b.geom)
+        ),
+        water_features AS (
+            SELECT jsonb_build_object(
+                'type', 'Feature',
+                'id', 'water/' || osm_type || '/' || osm_id,
+                'properties', jsonb_strip_nulls(jsonb_build_object(
+                    'waterType', water_type,
+                    'name', NULLIF(name, '')
+                )),
+                'geometry', ST_AsGeoJSON(geom, 6)::jsonb
+            ) AS feature
+            FROM water_geometries
+            WHERE NOT ST_IsEmpty(geom)
+        ),
+        road_geometries AS (
+            SELECT
+                r.osm_type,
+                r.osm_id,
+                r.road_type,
+                r.name,
+                r.ref,
+                r.bridge,
+                r.tunnel,
+                ST_Multi(ST_CollectionExtract(
+                    ST_Simplify(
+                        ST_Intersection(r.geom, b.geom),
+                        #{tolerance}
+                    ),
+                    2
+                )) AS geom
+            FROM gis.road r
+            CROSS JOIN request_bounds b
+            WHERE r.geom && b.geom
+              AND ST_Intersects(r.geom, b.geom)
+        ),
+        road_features AS (
+            SELECT jsonb_build_object(
+                'type', 'Feature',
+                'id', 'road/' || osm_type || '/' || osm_id,
+                'properties', jsonb_strip_nulls(jsonb_build_object(
+                    'roadType', road_type,
+                    'name', NULLIF(name, ''),
+                    'ref', NULLIF(ref, ''),
+                    'bridge', NULLIF(bridge, ''),
+                    'tunnel', NULLIF(tunnel, '')
+                )),
+                'geometry', ST_AsGeoJSON(geom, 6)::jsonb
+            ) AS feature
+            FROM road_geometries
+            WHERE NOT ST_IsEmpty(geom)
+        )
+        SELECT jsonb_build_object(
+            'type', 'ThematicMap',
+            'landcover', jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE((SELECT jsonb_agg(feature) FROM landcover_features), '[]'::jsonb)
+            ),
+            'water', jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE((SELECT jsonb_agg(feature) FROM water_features), '[]'::jsonb)
+            ),
+            'roads', jsonb_build_object(
+                'type', 'FeatureCollection',
+                'features', COALESCE((SELECT jsonb_agg(feature) FROM road_features), '[]'::jsonb)
+            ),
+            'metadata', jsonb_build_object(
+                'source', 'OpenStreetMap / PostgreSQL / PostGIS',
+                'attribution', '© OpenStreetMap contributors',
+                'center', jsonb_build_array(#{longitude}, #{latitude}),
+                'radius', #{radius},
+                'simplificationTolerance', #{tolerance},
+                'timestamp', to_char(CURRENT_TIMESTAMP AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+            )
+        )::text
+        ]]>
+    </select>
+
+</mapper>

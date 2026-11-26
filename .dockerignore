@@ -1,0 +1,11 @@
+target
+.git
+.github
+.settings
+.classpath
+.factorypath
+.project
+*.dump
+*.backup
+src/main/webapp/dem/tiles
+

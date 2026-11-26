@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd">
+
+    <!-- 접속 정보는 Eclipse/Tomcat에 등록한 환경변수에서만 읽습니다. -->
+    <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="org.postgresql.Driver" />
+        <property name="url" value="#{systemEnvironment['GIS_DB_URL']}" />
+        <property name="username" value="#{systemEnvironment['GIS_DB_USERNAME']}" />
+        <property name="password" value="#{systemEnvironment['GIS_DB_PASSWORD']}" />
+        <property name="initialSize" value="1" />
+        <property name="minIdle" value="1" />
+        <property name="maxIdle" value="4" />
+        <property name="maxTotal" value="8" />
+        <property name="maxWaitMillis" value="5000" />
+        <property name="validationQuery" value="SELECT 1" />
+        <property name="validationQueryTimeout" value="3" />
+        <property name="testOnBorrow" value="true" />
+    </bean>
+
+</beans>

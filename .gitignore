@@ -1,0 +1,17 @@
+target/
+.settings/
+.classpath
+.factorypath
+.project
+.idea/
+.vscode/
+*.iml
+*.log
+*.war
+.env
+.env.*
+!.env.example
+*.dump
+*.backup
+src/main/webapp/dem/tiles/
+
