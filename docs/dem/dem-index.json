@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "crs": "EPSG:4326",
+  "surfaceModel": "DSM",
+  "dataSource": "Copernicus DEM GLO-30 Public (DSM), 2021",
+  "attribution": "© DLR e.V. / Airbus Defence and Space / European Union / ESA",
+  "noData": -32767,
+  "tiles": [
+    {
+      "id": "N37E126",
+      "url": "./tiles/N37E126.tif",
+      "bounds": [
+        126,
+        37,
+        127,
+        38
+      ],
+      "band": 0,
+      "noData": -32767
+    }
+  ]
+}
