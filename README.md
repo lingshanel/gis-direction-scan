@@ -80,6 +80,8 @@ target/gis-scan-1.0.0.war
 
 ## Docker 실행
 
+Railway 배포 절차는 [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md)에 정리했습니다.
+
 ```bash
 docker build -t gis-scan .
 docker run --rm -p 8080:8080 \
